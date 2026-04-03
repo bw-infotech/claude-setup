@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # Define where the logic script will live
 LOGIC_PATH="$HOME/.aliasc_logic.sh"
@@ -9,14 +10,23 @@ cat << 'EOF' > "$LOGIC_PATH"
 read -p "Enter alias name: " name
 read -p "Enter command to run: " cmd
 
+# Validate alias name
+if [[ ! "$name" =~ ^[a-zA-Z_][a-zA-Z0-9_-]*$ ]]; then
+    echo "Error: Invalid alias name '$name'. Use only letters, digits, hyphens, and underscores (must start with a letter or underscore)."
+    exit 1
+fi
+
 # Check if the alias name already exists in .bash_aliases
 if grep -q "alias $name=" ~/.bash_aliases 2>/dev/null; then
     echo "Error: Alias '$name' already exists. Use a different name or edit ~/.bash_aliases manually."
     exit 1
 fi
 
+# Escape single quotes in the command for safe alias definition
+escaped_cmd="${cmd//\'/\'\\\'\'}"
+
 # Append the new alias
-echo "alias $name='$cmd'" >> ~/.bash_aliases
+echo "alias $name='$escaped_cmd'" >> ~/.bash_aliases
 echo "Success: Alias '$name' added."
 EOF
 
@@ -35,7 +45,7 @@ if ! grep -q "aliasc()" ~/.bashrc; then
 
 aliasc() {
     $LOGIC_PATH
-    source ~/.bashrc
+    source ~/.bash_aliases
 }
 EOF
     echo "Installed 'aliasc' command."

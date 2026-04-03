@@ -92,7 +92,7 @@ When the user says "newfeature [description]" or "new feature [description]".
 ### Phase 2: Implementation
 5. Create a feature branch: `git checkout -b feature/[short-name]`.
 6. Implement the feature based on the aligned spec.
-7. Use brownwinickai-staging as the UI/UX reference if applicable.
+7. Follow existing UI/UX patterns in the project if applicable.
 8. Build and verify: `docker compose build && docker compose up -d`.
 9. Stage and commit with a concise, imperative message.
 10. Push the branch: `git push -u origin feature/[short-name]`.
@@ -114,10 +114,10 @@ cd "$DIR" || exit 0
 changed=$(git diff --name-only HEAD 2>/dev/null; git diff --name-only 2>/dev/null; git ls-files --others --exclude-standard 2>/dev/null)
 
 # Were any non-memory files changed? (code, config, etc.)
-code_changed=$(echo "$changed" | grep -v '^\\.claude/rules/memory-' | grep -v '^$' | head -1)
+code_changed=$(echo "$changed" | grep -v '^\.claude/rules/memory-' | grep -v '^$' | head -1)
 
 # Were memory files updated?
-memory_changed=$(echo "$changed" | grep '^\\.claude/rules/memory-' | head -1)
+memory_changed=$(echo "$changed" | grep '^\.claude/rules/memory-' | head -1)
 
 if [ -n "$code_changed" ] && [ -z "$memory_changed" ]; then
   echo "MEMORY UPDATE REQUIRED: Code was changed but memory files were not updated. Update .claude/rules/memory-sessions.md (and memory-decisions.md if applicable) NOW before continuing."
@@ -136,16 +136,17 @@ if [ -f "$SETTINGS" ]; then
     # Merge hooks into existing settings using python (available on most systems)
     python3 -c "
 import json, sys
-with open('$SETTINGS') as f:
+settings_path, hook_cmd = sys.argv[1], sys.argv[2]
+with open(settings_path) as f:
     cfg = json.load(f)
 cfg.setdefault('hooks', {}).setdefault('Stop', []).append({
     'matcher': '',
-    'hooks': [{'type': 'command', 'command': '$HOOK_SCRIPT'}]
+    'hooks': [{'type': 'command', 'command': hook_cmd}]
 })
-with open('$SETTINGS', 'w') as f:
+with open(settings_path, 'w') as f:
     json.dump(cfg, f, indent=2)
     f.write('\n')
-"
+" "$SETTINGS" "$HOOK_SCRIPT"
     echo "  Added hook to existing settings.local.json"
   fi
 else
