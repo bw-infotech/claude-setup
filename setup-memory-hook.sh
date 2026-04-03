@@ -106,8 +106,8 @@ cat > "$HOOK_SCRIPT" << 'HOOKEOF'
 #!/bin/bash
 # Stop hook: remind Claude to update memory files if code was changed but memory wasn't
 
-# Find the project root (nearest .git directory)
-DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+# Find the project root via git
+DIR="$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null)" || exit 0
 cd "$DIR" || exit 0
 
 # Get list of modified/new files (staged + unstaged)
@@ -134,7 +134,9 @@ if [ -f "$SETTINGS" ]; then
     echo "  Hook already registered in settings.local.json"
   else
     # Merge hooks into existing settings using python (available on most systems)
-    python3 -c "
+    # Use python3 or python, whichever is available
+    PYTHON_CMD=$(command -v python3 || command -v python) || { echo "Error: Python is required but not found."; exit 1; }
+    "$PYTHON_CMD" -c "
 import json, sys
 settings_path, hook_cmd = sys.argv[1], sys.argv[2]
 with open(settings_path) as f:
